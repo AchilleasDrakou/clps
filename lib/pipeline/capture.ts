@@ -18,9 +18,12 @@ async function fcFetch(endpoint: string, body?: any, method = "POST") {
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok || data.error) {
-    throw new Error(`Firecrawl ${endpoint} failed: ${data.error ?? res.statusText}`);
+    console.error(`[Firecrawl] ${endpoint} ${res.status}:`, JSON.stringify(data).slice(0, 500));
+    throw new Error(`Firecrawl ${endpoint} failed: ${data.error ?? data.message ?? data.raw ?? res.statusText}`);
   }
   return data;
 }
@@ -128,7 +131,7 @@ export async function captureDemo(
     await fcFetch(`/browser/${sessionId}/execute`, {
       code: playwrightCode,
       language: "node",
-      timeout: estimatedDuration * 1000,
+      timeout: Math.min(estimatedDuration, 300),
     });
 
     // 5. Wait a beat then stop recorder
