@@ -1,13 +1,11 @@
-import { spawn } from "child_process";
+import { chromium } from "playwright-core";
+import { execSync } from "child_process";
+import fsPromises from "fs/promises";
 import path from "path";
 import { DemoAction, DemoPlan, CaptureResult } from "./types";
 
 const FIRECRAWL_API = "https://api.firecrawl.dev/v2";
 const API_KEY = () => process.env.FIRECRAWL_API_KEY!;
-
-const AGENT_RECORDER_BIN = path.resolve(
-  process.env.AGENT_RECORDER_PATH ?? "../agent-recorder/target/release/agent-recorder"
-);
 
 async function fcFetch(endpoint: string, body?: any, method = "POST") {
   const res = await fetch(`${FIRECRAWL_API}${endpoint}`, {
@@ -30,70 +28,55 @@ async function fcFetch(endpoint: string, body?: any, method = "POST") {
 
 const S = (v: string | undefined) => JSON.stringify(v ?? "");
 
-function actionToPlaywright(a: DemoAction): string {
-  const delay = a.delayMs ?? 300; // reduced from 500
-  switch (a.type) {
-    case "click":
-      return `await page.click(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    case "type":
-      return `await page.fill(${S(a.selector)}, ${S(a.text)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    case "hover":
-      return `await page.hover(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    case "press":
-      return `await page.keyboard.press(${S(a.key)});\nawait page.waitForTimeout(${delay});`;
-    case "scroll":
-      return `await page.mouse.wheel(0, 300);\nawait page.waitForTimeout(${delay});`;
-    case "scroll_to":
-      return `await page.locator(${S(a.selector)}).scrollIntoViewIfNeeded({ timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    case "wait":
-      return `await page.waitForTimeout(${Math.min(a.delayMs ?? 500, 2000)});`;
-    case "wait_for":
-      return `await page.waitForSelector("text=" + ${S(a.containsText)}, { timeout: 5000 }).catch(() => null);\nawait page.waitForTimeout(${delay});`;
-    case "select":
-      return `await page.selectOption(${S(a.selector)}, ${S(a.text)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    case "focus":
-      return `await page.focus(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
-    default:
-      return `// skip unknown action`;
+async function executeAction(page: any, action: DemoAction): Promise<boolean> {
+  const delay = action.delayMs ?? 300;
+  try {
+    switch (action.type) {
+      case "click":
+        await page.click(action.selector!, { timeout: 5000 });
+        break;
+      case "type":
+        await page.fill(action.selector!, action.text ?? "", { timeout: 5000 });
+        break;
+      case "hover":
+        await page.hover(action.selector!, { timeout: 5000 });
+        break;
+      case "press":
+        await page.keyboard.press(action.key!);
+        break;
+      case "scroll":
+        await page.mouse.wheel(0, 300);
+        break;
+      case "scroll_to":
+        await page.locator(action.selector!).scrollIntoViewIfNeeded({ timeout: 5000 });
+        break;
+      case "wait":
+        await page.waitForTimeout(Math.min(action.delayMs ?? 500, 2000));
+        return true; // no additional delay needed
+      case "wait_for":
+        await page.waitForSelector(`text=${action.containsText}`, { timeout: 5000 }).catch(() => null);
+        break;
+      case "select":
+        await page.selectOption(action.selector!, action.text ?? "", { timeout: 5000 });
+        break;
+      case "focus":
+        await page.focus(action.selector!, { timeout: 5000 });
+        break;
+    }
+    await page.waitForTimeout(delay);
+    return true;
+  } catch (err: any) {
+    console.warn(`[Capture] Action ${action.type} ${action.selector ?? ""} failed: ${err.message}`);
+    return false;
   }
-}
-
-function startRecorder(
-  cdpUrl: string,
-  outputPath: string,
-  durationSec: number
-): { process: ReturnType<typeof spawn>; done: Promise<void> } {
-  const proc = spawn(AGENT_RECORDER_BIN, [
-    "--url", "about:blank",
-    "--ws-endpoint", cdpUrl,
-    "--output", outputPath,
-    "--duration", String(durationSec),
-    "--width", "1280",
-    "--height", "720",
-    "--fps", "15",
-    "--quality", "85",
-  ]);
-
-  let stderr = "";
-  proc.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
-  proc.stdout?.on("data", (d: Buffer) => { console.log(`[recorder] ${d.toString().trim()}`); });
-
-  const done = new Promise<void>((resolve, reject) => {
-    proc.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`agent-recorder exited ${code}: ${stderr.slice(-300)}`));
-    });
-    proc.on("error", reject);
-  });
-
-  return { process: proc, done };
 }
 
 export async function captureDemo(
   plan: DemoPlan,
   outputDir: string
 ): Promise<CaptureResult> {
-  const session = await fcFetch("/browser", { ttl: 120, activityTtl: 60 });
+  // 1. Launch Firecrawl Browser Sandbox
+  const session = await fcFetch("/browser", { ttl: 180, activityTtl: 120 });
   if (!session.id || !session.cdpUrl) {
     throw new Error("Firecrawl browser session missing id or cdpUrl");
   }
@@ -101,62 +84,86 @@ export async function captureDemo(
   const cdpUrl = session.cdpUrl;
   const liveViewUrl = session.liveViewUrl ?? "";
 
+  const videoDir = path.join(outputDir, "video");
+  await fsPromises.mkdir(videoDir, { recursive: true });
+
   const rawVideoPath = path.join(outputDir, "raw.mp4");
   const sidecarPath = path.join(outputDir, "raw.mp4.proof.json");
-  let recorder: ReturnType<typeof startRecorder> | null = null;
+
+  let browser: any = null;
 
   try {
-    // Navigate — use domcontentloaded instead of networkidle (much faster)
-    await fcFetch(`/browser/${sessionId}/execute`, {
-      code: `await page.goto(${S(plan.brief.url)}, { waitUntil: "domcontentloaded", timeout: 15000 });\nawait page.waitForTimeout(1000);`,
-      language: "node",
-      timeout: 30,
+    // 2. Connect local Playwright to Firecrawl's browser via CDP
+    console.log("[Capture] Connecting Playwright to Firecrawl CDP...");
+    browser = await chromium.connectOverCDP(cdpUrl);
+
+    // 3. Get the existing context and create a new page with video recording
+    const context = browser.contexts()[0] ?? await browser.newContext({
+      recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } },
     });
 
-    // Start recorder
-    const estimatedDuration = Math.min(plan.actions.length * 2 + 8, 60);
-    recorder = startRecorder(cdpUrl, rawVideoPath, estimatedDuration);
-    await new Promise((r) => setTimeout(r, 1000)); // 1s instead of 2s
+    // If context already exists (from Firecrawl), create page with video in a new context
+    const recordingContext = await browser.newContext({
+      recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } },
+    });
+    const page = await recordingContext.newPage();
 
-    // Execute actions one at a time — resilient to individual failures
+    // 4. Navigate to target URL
+    console.log(`[Capture] Navigating to ${plan.brief.url}...`);
+    await page.goto(plan.brief.url, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    // 5. Execute actions — Playwright directly, not via Firecrawl execute API
     const actionResults = [];
     for (let i = 0; i < plan.actions.length; i++) {
       const action = plan.actions[i];
-      const code = actionToPlaywright(action);
-      try {
-        await fcFetch(`/browser/${sessionId}/execute`, {
-          code,
-          language: "node",
-          timeout: 15, // 15s per action max
-        });
-        actionResults.push({ type: action.type, selector: action.selector, ok: true, index: i });
-      } catch (err: any) {
-        console.warn(`[Capture] Action ${i} failed: ${err.message}`);
-        actionResults.push({ type: action.type, selector: action.selector, ok: false, index: i });
-        // Continue — don't let one failed action kill the whole capture
-      }
+      console.log(`[Capture] Action ${i + 1}/${plan.actions.length}: ${action.type} ${action.selector ?? ""}`);
+      const ok = await executeAction(page, action);
+      actionResults.push({ type: action.type, selector: action.selector, ok, index: i });
     }
 
-    // Brief pause then stop recorder
-    await new Promise((r) => setTimeout(r, 1000));
-    recorder.process.kill("SIGTERM");
-    await recorder.done.catch(() => {});
+    // 6. Brief pause for final state
+    await page.waitForTimeout(1500);
 
+    // 7. Close page to finalize video recording
+    await page.close();
+    const videoPath = await page.video()?.path();
+    await recordingContext.close();
+
+    // 8. Convert .webm to .mp4 if video was captured
+    if (videoPath) {
+      console.log(`[Capture] Converting ${videoPath} → ${rawVideoPath}`);
+      try {
+        execSync(
+          `ffmpeg -y -i "${videoPath}" -c:v libx264 -preset fast -crf 23 -c:a aac "${rawVideoPath}"`,
+          { timeout: 60000, stdio: "pipe" }
+        );
+      } catch (err: any) {
+        console.warn("[Capture] FFmpeg conversion failed, copying raw webm");
+        await fsPromises.copyFile(videoPath, rawVideoPath);
+      }
+    } else {
+      console.warn("[Capture] No video path returned from Playwright");
+    }
+
+    // 9. Write sidecar metadata
     const sidecar = {
       output: rawVideoPath,
       demoPlan: { beats: plan.beats },
       actionResults,
-      metrics: { estimatedDuration },
+      metrics: { actionsTotal: plan.actions.length, actionsSucceeded: actionResults.filter(a => a.ok).length },
     };
+    await fsPromises.writeFile(sidecarPath, JSON.stringify(sidecar, null, 2));
 
-    const fs = await import("fs/promises");
-    await fs.writeFile(sidecarPath, JSON.stringify(sidecar, null, 2));
+    const durationMs = plan.actions.reduce((sum, a) => sum + (a.delayMs ?? 300), 0) + 3000;
 
-    return { rawVideoPath, sidecarPath, liveViewUrl, durationMs: estimatedDuration * 1000 };
+    return { rawVideoPath, sidecarPath, liveViewUrl, durationMs };
   } finally {
-    if (recorder) {
-      try { recorder.process.kill("SIGTERM"); } catch {}
+    // Disconnect Playwright (doesn't close the browser — Firecrawl owns it)
+    if (browser) {
+      try { await browser.close(); } catch {}
     }
+    // Clean up Firecrawl session
     await fcFetch(`/browser/${sessionId}`, undefined, "DELETE").catch(() => {});
   }
 }
