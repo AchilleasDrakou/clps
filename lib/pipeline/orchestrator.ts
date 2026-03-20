@@ -6,6 +6,7 @@ import { planDemo } from "./plan";
 import { captureDemo } from "./capture";
 import { renderCinematic } from "./render";
 import { narrateBeats } from "./narrate";
+import { generateMusicBed } from "./music";
 import { mergeVideoAudio } from "./merge";
 
 export async function runPipeline(
@@ -81,41 +82,56 @@ export async function runPipeline(
     emit({ stage: "planning", message: "Saved plan.json", percent: 36, data: { fileOp: { type: "write", path: `output/${runId}/plan.json`, sizeKb: Math.ceil(planJson.length / 1024) } } });
   }
 
-  // 3. Capture + Narration in parallel
+  // 3. Capture + audio in parallel (mode-dependent)
+  const needsAudio = brief.mode !== "raw";
   emit({ stage: "capturing", message: "Launching browser...", percent: 40 });
-  emit({ stage: "narrating", message: "Generating voiceover...", percent: 40 });
 
-  const [capture, narration] = await Promise.all([
+  const audioPromise = needsAudio
+    ? (async (): Promise<string> => {
+        if (brief.mode === "tutorial") {
+          emit({ stage: "narrating", message: "Generating voiceover...", percent: 40 });
+          const n = await narrateBeats(plan.beats, outputDir);
+          for (let i = 0; i < n.segments.length; i++) {
+            emit({
+              stage: "narrating",
+              message: `Beat ${i + 1}/${n.segments.length}`,
+              percent: 78 + Math.round((i / n.segments.length) * 12),
+              data: { narrationSegment: { beatId: n.segments[i].beatId, durationMs: n.segments[i].durationMs } },
+            });
+          }
+          return n.audioPath;
+        } else {
+          // showreel — generate music bed
+          emit({ stage: "narrating", message: "Generating soundtrack...", percent: 40 });
+          const durationSec = plan.beats.reduce((s, b) => s + b.holdMs, 0) / 1000;
+          const musicPath = await generateMusicBed(durationSec, outputDir);
+          emit({ stage: "narrating", message: "Soundtrack ready", percent: 90 });
+          return musicPath;
+        }
+      })()
+    : Promise.resolve(null);
+
+  const [capture, audioPath] = await Promise.all([
     captureDemo(plan, outputDir, isVisual ? emit : undefined, signal).then((c) => {
       emit({ stage: "capturing", message: "Recording complete", percent: 62, data: { liveViewUrl: c.liveViewUrl } });
       return c;
     }),
-    (async () => {
-      const n = await narrateBeats(plan.beats, outputDir);
-      for (let i = 0; i < n.segments.length; i++) {
-        const seg = n.segments[i];
-        emit({
-          stage: "narrating",
-          message: `Beat ${i + 1}/${n.segments.length}`,
-          percent: 78 + Math.round((i / n.segments.length) * 12),
-          data: { narrationSegment: { beatId: seg.beatId, durationMs: seg.durationMs } },
-        });
-      }
-      return n;
-    })(),
+    audioPromise,
   ]);
 
   // 4. Render
   emit({ stage: "rendering", message: "Applying cinematic effects...", percent: 65 });
   const render = await renderCinematic(capture, plan, outputDir);
 
-  // 5. Merge
-  emit({ stage: "merging", message: "Combining video and audio...", percent: 92 });
-  const finalVideoPath = await mergeVideoAudio(
-    render.studioVideoPath,
-    narration.audioPath,
-    outputDir
-  );
+  // 5. Merge (only if audio exists)
+  let finalVideoPath: string;
+  if (audioPath) {
+    emit({ stage: "merging", message: "Combining video and audio...", percent: 92 });
+    finalVideoPath = await mergeVideoAudio(render.studioVideoPath, audioPath, outputDir);
+  } else {
+    finalVideoPath = render.studioVideoPath;
+    emit({ stage: "merging", message: "Finalizing video...", percent: 95 });
+  }
 
   emit({ stage: "complete", message: "Demo video ready!", percent: 100, data: { finalVideoPath } });
 
@@ -123,7 +139,7 @@ export async function runPipeline(
     finalVideoPath,
     rawVideoPath: capture.rawVideoPath,
     studioVideoPath: render.studioVideoPath,
-    narrationPath: narration.audioPath,
+    narrationPath: audioPath ?? "",
     liveViewUrl: capture.liveViewUrl,
     demoPlan: plan,
   };
