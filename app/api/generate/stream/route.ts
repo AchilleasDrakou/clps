@@ -38,11 +38,14 @@ export async function POST(req: NextRequest) {
       const send = (event: PipelineEvent) => {
         const data = JSON.stringify(event);
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        console.log(`[SSE] ${event.stage}: ${event.message}`);
       };
 
       try {
+        send({ stage: "discovering", message: "Pipeline started...", percent: 1 });
         await runPipeline(brief, send);
       } catch (err: any) {
+        console.error("[SSE] Pipeline error:", err);
         send({
           stage: "error",
           message: err.message ?? "Pipeline failed",

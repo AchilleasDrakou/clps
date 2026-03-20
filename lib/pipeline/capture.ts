@@ -47,7 +47,7 @@ function actionsToPlaywright(actions: DemoAction[]): string {
       case "wait":
         return `await page.waitForTimeout(${a.delayMs ?? 1000});`;
       case "wait_for":
-        return `await page.waitForSelector(\`text=\${${S(a.containsText)}}\`, { timeout: 10000 });\nawait page.waitForTimeout(${delay});`;
+        return `await page.waitForSelector("text=" + ${S(a.containsText)}, { timeout: 10000 });\nawait page.waitForTimeout(${delay});`;
       case "select":
         return `await page.selectOption(${S(a.selector)}, ${S(a.text)});\nawait page.waitForTimeout(${delay});`;
       case "focus":
@@ -58,8 +58,6 @@ function actionsToPlaywright(actions: DemoAction[]): string {
   });
 
   return `
-const context = browser.contexts()[0];
-const page = context.pages()[0] || await context.newPage();
 await page.waitForTimeout(1000);
 ${lines.join("\n")}
 await page.waitForTimeout(1000);

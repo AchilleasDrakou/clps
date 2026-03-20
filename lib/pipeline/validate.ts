@@ -1,7 +1,13 @@
 export function validateUrl(url: string): string {
+  // Auto-prepend https:// if no protocol
+  let raw = url;
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+
   let parsed: URL;
   try {
-    parsed = new URL(url);
+    parsed = new URL(raw);
   } catch {
     throw new Error(`Invalid URL: ${url}`);
   }
