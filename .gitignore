@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env.local
+.env
+*.mp4
+*.mp3
+*.wav
+.DS_Store
+out/
