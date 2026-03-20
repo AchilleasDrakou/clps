@@ -54,7 +54,7 @@ export async function planDemo(
 URL: ${brief.url}
 Feature: ${brief.feature}
 Audience: ${brief.audience}
-Tone: ${brief.tone}
+Tone: ${brief.mode}
 
 ## Page Content
 ${pageContent}

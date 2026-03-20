@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       url: validatedUrl,
       feature: body.feature,
       audience: body.audience ?? "general",
-      tone: body.tone ?? "professional",
+      mode: body.mode ?? "raw",
     };
 
     const jobId = crypto.randomUUID();

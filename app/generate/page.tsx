@@ -102,7 +102,7 @@ function GeneratePage() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url") ?? "";
   const feature = searchParams.get("feature") ?? "";
-  const tone = searchParams.get("tone") ?? "professional";
+  const mode = searchParams.get("mode") ?? "raw";
   const audience = searchParams.get("audience") ?? "general";
 
   const [percent, setPercent] = useState(0);
@@ -270,7 +270,7 @@ function GeneratePage() {
         const res = await fetch("/api/generate/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, feature, tone, audience }),
+          body: JSON.stringify({ url, feature, mode, audience }),
           signal: controller.signal,
         });
         if (!res.ok || !res.body) {
@@ -308,7 +308,7 @@ function GeneratePage() {
     })();
 
     return () => controller.abort();
-  }, [url, feature, tone, audience, handleEvent]);
+  }, [url, feature, mode, audience, handleEvent]);
 
   const formatTime = (s: number) =>
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

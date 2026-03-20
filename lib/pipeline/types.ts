@@ -1,8 +1,10 @@
+export type DemoMode = "raw" | "tutorial" | "showreel";
+
 export interface DemoBrief {
   url: string;
   feature: string;
   audience: "buyers" | "users" | "engineers" | "general";
-  tone: "professional" | "casual" | "tutorial" | "cinematic";
+  mode: DemoMode;
 }
 
 export interface DiscoveredPage {

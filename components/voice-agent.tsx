@@ -41,7 +41,7 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
           url: params.url,
           feature: params.feature,
           audience: params.audience ?? "general",
-          tone: params.tone ?? "professional",
+          mode: params.mode ?? "raw",
         };
         onDemoRequested(brief);
         return "Demo generation started. The user can see the live view.";

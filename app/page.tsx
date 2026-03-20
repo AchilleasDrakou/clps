@@ -23,11 +23,10 @@ const Dithering = lazy(() =>
 
 type FlowState = "url-input" | "brief-builder";
 
-const TONES: DemoBrief["tone"][] = [
-  "professional",
-  "casual",
-  "tutorial",
-  "cinematic",
+const MODES: DemoBrief["mode"][] = [
+  "raw",
+  "showreel",
+  "showreel",
 ];
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
@@ -37,7 +36,7 @@ export default function Home() {
   const [flowState, setFlowState] = useState<FlowState>("url-input");
   const [url, setUrl] = useState("");
   const [feature, setFeature] = useState("");
-  const [tone, setTone] = useState<DemoBrief["tone"]>("professional");
+  const [mode, setMode] = useState<DemoBrief["mode"]>("raw");
   const [isCardHovered, setIsCardHovered] = useState(false);
   const featureInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +67,7 @@ export default function Home() {
     setFlowState("url-input");
     setUrl("");
     setFeature("");
-    setTone("professional");
+    setMode("raw");
   }, []);
 
   const handleGenerate = useCallback(() => {
@@ -77,10 +76,10 @@ export default function Home() {
       url: url.trim(),
       feature: feature.trim(),
       audience: "general",
-      tone,
+      mode,
     });
     router.push(`/generate?${params.toString()}`);
-  }, [url, feature, tone, router]);
+  }, [url, feature, mode, router]);
 
   const handleFeatureKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -292,12 +291,12 @@ export default function Home() {
                   }}
                   className="flex items-center gap-2 justify-center"
                 >
-                  {TONES.map((t) => (
+                  {MODES.map((t) => (
                     <button
                       key={t}
-                      onClick={() => setTone(t)}
+                      onClick={() => setMode(t)}
                       className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium capitalize transition-all duration-250 ${
-                        tone === t
+                        mode === t
                           ? "bg-[var(--color-accent)] text-black"
                           : "bg-white/[0.03] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:border-[var(--color-border-focus)] hover:text-gray-300"
                       }`}
