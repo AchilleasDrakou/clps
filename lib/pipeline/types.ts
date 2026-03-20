@@ -88,8 +88,21 @@ export type PipelineStage =
   | "complete"
   | "error";
 
-export interface PipelineProgress {
+export interface PipelineEvent {
   stage: PipelineStage;
   message: string;
   percent: number;
+  data?: {
+    pages?: { url: string; title: string }[];
+    plan?: { actions: DemoAction[]; beats: DemoBeat[]; narrationScript: string[] };
+    liveViewUrl?: string;
+    actionResult?: { index: number; type: string; selector?: string; ok: boolean };
+    beatComplete?: { id: string; kind: string; label: string };
+    narrationSegment?: { beatId: string; durationMs: number };
+    finalVideoPath?: string;
+    error?: string;
+  };
 }
+
+// Keep old type as alias for backwards compat
+export type PipelineProgress = PipelineEvent;

@@ -27,7 +27,7 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
     },
     onMessage: (message) => {
       if (message.source === "ai") {
-        setTranscript((prev) => [...prev.slice(-8), `Clips: ${message.message}`]);
+        setTranscript((prev) => [...prev.slice(-8), `Clippee: ${message.message}`]);
       } else {
         setTranscript((prev) => [...prev.slice(-8), `You: ${message.message}`]);
       }
@@ -101,11 +101,11 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
 
       <span className="text-sm text-gray-400">
         {!isActive
-          ? "Tap to talk to Clips"
+          ? "Tap to talk to Clippee"
           : mode === "listening"
           ? "Listening..."
           : mode === "speaking"
-          ? "Clips is speaking..."
+          ? "Clippee is speaking..."
           : "Connected"}
       </span>
 
@@ -116,7 +116,7 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
             <p
               key={i}
               className={`text-sm ${
-                line.startsWith("Clips:") ? "text-blue-400" : "text-gray-300"
+                line.startsWith("Clippee:") ? "text-blue-400" : "text-gray-300"
               }`}
             >
               {line}

@@ -1,50 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { VoiceAgent } from "@/components/voice-agent";
 import { DemoBrief } from "@/lib/pipeline/types";
 
 const AGENT_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? "";
 
 export default function Home() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [feature, setFeature] = useState("");
-  const [tone, setTone] = useState<string>("professional");
-  const [status, setStatus] = useState<string | null>(null);
-  const [liveViewUrl, setLiveViewUrl] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
+  const [tone, setTone] = useState("professional");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
 
-  async function startGeneration(brief: DemoBrief) {
-    setGenerating(true);
-    setStatus("Starting pipeline...");
-    setUrl(brief.url);
-    setFeature(brief.feature);
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(brief),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setStatus(`Done! Video ready.`);
-        if (data.liveViewUrl) setLiveViewUrl(data.liveViewUrl);
-      } else {
-        setStatus(`Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    } finally {
-      setGenerating(false);
-    }
+  function navigateToGenerate(brief: DemoBrief) {
+    const params = new URLSearchParams({
+      url: brief.url,
+      feature: brief.feature,
+      audience: brief.audience,
+      tone: brief.tone,
+    });
+    router.push(`/generate?${params.toString()}`);
   }
 
   function handleTextSubmit() {
     if (!url || !feature) return;
-    startGeneration({ url, feature, audience: "general", tone: tone as any });
+    navigateToGenerate({
+      url,
+      feature,
+      audience: "general",
+      tone: tone as DemoBrief["tone"],
+    });
   }
 
   return (
@@ -82,8 +69,7 @@ export default function Home() {
       {inputMode === "voice" && AGENT_ID && (
         <VoiceAgent
           agentId={AGENT_ID}
-          onDemoRequested={startGeneration}
-          onStatusChange={(s) => setStatus(s)}
+          onDemoRequested={navigateToGenerate}
         />
       )}
 
@@ -123,29 +109,11 @@ export default function Home() {
 
           <button
             onClick={handleTextSubmit}
-            disabled={generating || !url || !feature}
+            disabled={!url || !feature}
             className="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {generating ? "Generating..." : "Generate Demo"}
+            Generate Demo
           </button>
-        </div>
-      )}
-
-      {/* Status */}
-      {status && (
-        <div className="mt-8 p-4 bg-gray-900 border border-gray-700 rounded-lg max-w-lg w-full">
-          <p className="text-sm text-gray-300">{status}</p>
-        </div>
-      )}
-
-      {/* Live View */}
-      {liveViewUrl && (
-        <div className="mt-8 w-full max-w-4xl">
-          <h2 className="text-sm text-gray-400 mb-2">Live View — watching the demo being recorded</h2>
-          <iframe
-            src={liveViewUrl}
-            className="w-full h-[500px] rounded-lg border border-gray-700"
-          />
         </div>
       )}
     </main>
