@@ -5,7 +5,7 @@ const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
 export async function discoverPages(
   brief: DemoBrief,
-  limit = 5
+  limit = 3
 ): Promise<DiscoveredPage[]> {
   // URL is already validated by the route handler
   const hostname = new URL(brief.url).hostname;

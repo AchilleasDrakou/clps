@@ -28,44 +28,34 @@ async function fcFetch(endpoint: string, body?: any, method = "POST") {
   return data;
 }
 
-// Safe string interpolation for Playwright code generation
 const S = (v: string | undefined) => JSON.stringify(v ?? "");
 
-function actionsToPlaywright(actions: DemoAction[]): string {
-  const lines = actions.map((a) => {
-    const delay = a.delayMs ?? 500;
-    switch (a.type) {
-      case "click":
-        return `await page.click(${S(a.selector)});\nawait page.waitForTimeout(${delay});`;
-      case "type":
-        return `await page.fill(${S(a.selector)}, ${S(a.text)});\nawait page.waitForTimeout(${delay});`;
-      case "hover":
-        return `await page.hover(${S(a.selector)});\nawait page.waitForTimeout(${delay});`;
-      case "press":
-        return `await page.keyboard.press(${S(a.key)});\nawait page.waitForTimeout(${delay});`;
-      case "scroll":
-        return `await page.mouse.wheel(0, 300);\nawait page.waitForTimeout(${delay});`;
-      case "scroll_to":
-        return `await page.locator(${S(a.selector)}).scrollIntoViewIfNeeded();\nawait page.waitForTimeout(${delay});`;
-      case "wait":
-        return `await page.waitForTimeout(${a.delayMs ?? 1000});`;
-      case "wait_for":
-        return `await page.waitForSelector("text=" + ${S(a.containsText)}, { timeout: 10000 });\nawait page.waitForTimeout(${delay});`;
-      case "select":
-        return `await page.selectOption(${S(a.selector)}, ${S(a.text)});\nawait page.waitForTimeout(${delay});`;
-      case "focus":
-        return `await page.focus(${S(a.selector)});\nawait page.waitForTimeout(${delay});`;
-      default:
-        return `// unknown action type`;
-    }
-  });
-
-  return `
-await page.waitForTimeout(1000);
-${lines.join("\n")}
-await page.waitForTimeout(1000);
-console.log("ACTIONS_COMPLETE");
-`;
+function actionToPlaywright(a: DemoAction): string {
+  const delay = a.delayMs ?? 300; // reduced from 500
+  switch (a.type) {
+    case "click":
+      return `await page.click(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    case "type":
+      return `await page.fill(${S(a.selector)}, ${S(a.text)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    case "hover":
+      return `await page.hover(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    case "press":
+      return `await page.keyboard.press(${S(a.key)});\nawait page.waitForTimeout(${delay});`;
+    case "scroll":
+      return `await page.mouse.wheel(0, 300);\nawait page.waitForTimeout(${delay});`;
+    case "scroll_to":
+      return `await page.locator(${S(a.selector)}).scrollIntoViewIfNeeded({ timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    case "wait":
+      return `await page.waitForTimeout(${Math.min(a.delayMs ?? 500, 2000)});`;
+    case "wait_for":
+      return `await page.waitForSelector("text=" + ${S(a.containsText)}, { timeout: 5000 }).catch(() => null);\nawait page.waitForTimeout(${delay});`;
+    case "select":
+      return `await page.selectOption(${S(a.selector)}, ${S(a.text)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    case "focus":
+      return `await page.focus(${S(a.selector)}, { timeout: 5000 });\nawait page.waitForTimeout(${delay});`;
+    default:
+      return `// skip unknown action`;
+  }
 }
 
 function startRecorder(
@@ -99,7 +89,6 @@ export async function captureDemo(
   plan: DemoPlan,
   outputDir: string
 ): Promise<CaptureResult> {
-  // 1. Launch Firecrawl Browser Sandbox
   const session = await fcFetch("/browser", { ttl: 120, activityTtl: 60 });
   if (!session.id || !session.cdpUrl) {
     throw new Error("Firecrawl browser session missing id or cdpUrl");
@@ -113,60 +102,57 @@ export async function captureDemo(
   let recorder: ReturnType<typeof startRecorder> | null = null;
 
   try {
-    // 2. Navigate to target URL first
+    // Navigate — use domcontentloaded instead of networkidle (much faster)
     await fcFetch(`/browser/${sessionId}/execute`, {
-      code: `await page.goto(${S(plan.brief.url)}, { waitUntil: "networkidle" });\nawait page.waitForTimeout(2000);\nconsole.log("NAV_COMPLETE");`,
+      code: `await page.goto(${S(plan.brief.url)}, { waitUntil: "domcontentloaded", timeout: 15000 });\nawait page.waitForTimeout(1000);`,
       language: "node",
+      timeout: 30,
     });
 
-    // 3. Start recorder + execute actions in parallel
-    const estimatedDuration = plan.actions.length * 3 + 10;
+    // Start recorder
+    const estimatedDuration = Math.min(plan.actions.length * 2 + 8, 60);
     recorder = startRecorder(cdpUrl, rawVideoPath, estimatedDuration);
+    await new Promise((r) => setTimeout(r, 1000)); // 1s instead of 2s
 
-    // Small delay to let recorder connect and start screencast
-    await new Promise((r) => setTimeout(r, 2000));
+    // Execute actions one at a time — resilient to individual failures
+    const actionResults = [];
+    for (let i = 0; i < plan.actions.length; i++) {
+      const action = plan.actions[i];
+      const code = actionToPlaywright(action);
+      try {
+        await fcFetch(`/browser/${sessionId}/execute`, {
+          code,
+          language: "node",
+          timeout: 15, // 15s per action max
+        });
+        actionResults.push({ type: action.type, selector: action.selector, ok: true, index: i });
+      } catch (err: any) {
+        console.warn(`[Capture] Action ${i} failed: ${err.message}`);
+        actionResults.push({ type: action.type, selector: action.selector, ok: false, index: i });
+        // Continue — don't let one failed action kill the whole capture
+      }
+    }
 
-    // 4. Execute actions via Firecrawl
-    const playwrightCode = actionsToPlaywright(plan.actions);
-    await fcFetch(`/browser/${sessionId}/execute`, {
-      code: playwrightCode,
-      language: "node",
-      timeout: Math.min(estimatedDuration, 300),
-    });
-
-    // 5. Wait a beat then stop recorder
-    await new Promise((r) => setTimeout(r, 2000));
+    // Brief pause then stop recorder
+    await new Promise((r) => setTimeout(r, 1000));
     recorder.process.kill("SIGTERM");
-    await recorder.done.catch(() => {}); // may exit non-zero on SIGTERM
+    await recorder.done.catch(() => {});
 
-    // 6. Write sidecar metadata
     const sidecar = {
       output: rawVideoPath,
       demoPlan: { beats: plan.beats },
-      actionResults: plan.actions.map((a, i) => ({
-        type: a.type,
-        selector: a.selector,
-        ok: true,
-        index: i,
-      })),
+      actionResults,
       metrics: { estimatedDuration },
     };
 
     const fs = await import("fs/promises");
     await fs.writeFile(sidecarPath, JSON.stringify(sidecar, null, 2));
 
-    return {
-      rawVideoPath,
-      sidecarPath,
-      liveViewUrl,
-      durationMs: estimatedDuration * 1000,
-    };
+    return { rawVideoPath, sidecarPath, liveViewUrl, durationMs: estimatedDuration * 1000 };
   } finally {
-    // Kill recorder if still running
     if (recorder) {
       try { recorder.process.kill("SIGTERM"); } catch {}
     }
-    // Clean up browser session
     await fcFetch(`/browser/${sessionId}`, undefined, "DELETE").catch(() => {});
   }
 }
