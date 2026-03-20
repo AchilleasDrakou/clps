@@ -77,6 +77,18 @@ export interface PipelineResult {
   demoPlan: DemoPlan;
 }
 
+/* ── Pipeline Mode ── */
+
+export type PipelineMode = "visual" | "headless";
+
+export interface PipelineOptions {
+  mode: PipelineMode;
+  onEvent?: (event: PipelineEvent) => void;
+  signal?: AbortSignal;
+}
+
+/* ── Pipeline Stages & Events ── */
+
 export type PipelineStage =
   | "discovering"
   | "understanding"
@@ -93,6 +105,7 @@ export interface PipelineEvent {
   message: string;
   percent: number;
   data?: {
+    // Existing fields
     pages?: { url: string; title: string }[];
     plan?: { actions: DemoAction[]; beats: DemoBeat[]; narrationScript: string[] };
     liveViewUrl?: string;
@@ -101,8 +114,20 @@ export interface PipelineEvent {
     narrationSegment?: { beatId: string; durationMs: number };
     finalVideoPath?: string;
     error?: string;
+
+    // Visual mode: discovery
+    searchQuery?: string;
+    pageDiscovered?: { url: string; title: string; favicon?: string };
+
+    // Visual mode: understanding
+    scrapeProgress?: { url: string; title: string; charCount: number; tokenEstimate: number };
+
+    // Visual mode: capture
+    screenshot?: { url: string; actionIndex: number };
+    currentAction?: { index: number; total: number; type: string; selector?: string; text?: string };
+
+    // Visual mode: file operations
+    fileOp?: { type: "write" | "read"; path: string; sizeKb?: number };
   };
 }
 
-// Keep old type as alias for backwards compat
-export type PipelineProgress = PipelineEvent;

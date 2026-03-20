@@ -33,20 +33,28 @@ export async function POST(req: NextRequest) {
     tone: body.tone ?? "professional",
   };
 
+  const abortController = new AbortController();
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
       const send = (event: PipelineEvent) => {
-        const data = JSON.stringify(event);
-        controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        console.log(`[SSE] ${event.stage}: ${event.message}`);
+        if (closed) return;
+        try {
+          const data = JSON.stringify(event);
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          console.log(`[SSE] ${event.stage}: ${event.message}`);
+        } catch {
+          closed = true;
+          abortController.abort();
+        }
       };
 
       try {
         send({ stage: "discovering", message: "Pipeline started...", percent: 1 });
         // Look up pre-scraped data from server cache (not from client — security)
         const cachedPage = getPrescrape(validatedUrl);
-        await runPipeline(brief, send, cachedPage);
+        await runPipeline(brief, { mode: "visual", onEvent: send, signal: abortController.signal }, cachedPage);
       } catch (err: any) {
         console.error("[SSE] Pipeline error:", err);
         send({
@@ -58,6 +66,9 @@ export async function POST(req: NextRequest) {
       } finally {
         controller.close();
       }
+    },
+    cancel() {
+      abortController.abort();
     },
   });
 

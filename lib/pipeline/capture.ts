@@ -2,7 +2,9 @@ import { chromium } from "playwright-core";
 import { execSync } from "child_process";
 import fsPromises from "fs/promises";
 import path from "path";
-import { DemoAction, DemoPlan, CaptureResult } from "./types";
+import { DemoAction, DemoPlan, CaptureResult, PipelineEvent } from "./types";
+
+type EmitFn = (event: PipelineEvent) => void;
 
 const FIRECRAWL_API = "https://api.firecrawl.dev/v2";
 const API_KEY = () => process.env.FIRECRAWL_API_KEY!;
@@ -73,7 +75,9 @@ async function executeAction(page: any, action: DemoAction): Promise<boolean> {
 
 export async function captureDemo(
   plan: DemoPlan,
-  outputDir: string
+  outputDir: string,
+  visualEmit?: EmitFn,
+  signal?: AbortSignal
 ): Promise<CaptureResult> {
   // 1. Launch Firecrawl Browser Sandbox
   const session = await fcFetch("/browser", { ttl: 180, activityTtl: 120 });
@@ -89,6 +93,10 @@ export async function captureDemo(
 
   const rawVideoPath = path.join(outputDir, "raw.mp4");
   const sidecarPath = path.join(outputDir, "raw.mp4.proof.json");
+
+  // Screenshot directory for visual mode
+  const screenshotDir = path.join(outputDir, "screenshots");
+  if (visualEmit) await fsPromises.mkdir(screenshotDir, { recursive: true });
 
   let browser: any = null;
 
@@ -115,11 +123,53 @@ export async function captureDemo(
 
     // 5. Execute actions — Playwright directly, not via Firecrawl execute API
     const actionResults = [];
+    const runId = path.basename(outputDir);
     for (let i = 0; i < plan.actions.length; i++) {
+      if (signal?.aborted) {
+        console.log("[Capture] Aborted — stopping action execution");
+        break;
+      }
       const action = plan.actions[i];
+
+      // Visual: emit currentAction BEFORE execution
+      if (visualEmit) {
+        const pct = 45 + Math.round((i / plan.actions.length) * 15);
+        visualEmit({
+          stage: "capturing",
+          message: `${action.type} ${action.selector ?? ""}`.trim(),
+          percent: pct,
+          data: {
+            currentAction: {
+              index: i,
+              total: plan.actions.length,
+              type: action.type,
+              selector: action.selector,
+              text: action.text,
+            },
+          },
+        });
+      }
+
       console.log(`[Capture] Action ${i + 1}/${plan.actions.length}: ${action.type} ${action.selector ?? ""}`);
       const ok = await executeAction(page, action);
       actionResults.push({ type: action.type, selector: action.selector, ok, index: i });
+
+      // Visual: capture screenshot after successful action
+      if (visualEmit && ok) {
+        try {
+          const screenshotBuf = await page.screenshot({ type: "jpeg", quality: 60 });
+          const filename = `action-${i}.jpg`;
+          await fsPromises.writeFile(path.join(screenshotDir, filename), screenshotBuf);
+          visualEmit({
+            stage: "capturing",
+            message: `Screenshot ${i + 1}/${plan.actions.length}`,
+            percent: 45 + Math.round((i / plan.actions.length) * 15),
+            data: { screenshot: { url: `/api/artifacts/${runId}/screenshots/${filename}`, actionIndex: i } },
+          });
+        } catch {
+          // Screenshot failed — don't block pipeline
+        }
+      }
     }
 
     // 6. Brief pause for final state
