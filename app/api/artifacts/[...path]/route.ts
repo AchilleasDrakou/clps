@@ -23,9 +23,10 @@ export async function GET(
   const outputDir = path.join(process.cwd(), "output");
   const filePath = path.join(outputDir, ...segments);
 
-  // Prevent path traversal
+  // Prevent path traversal (append sep to avoid sibling dir bypass e.g. output2/)
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(path.resolve(outputDir))) {
+  const resolvedBase = path.resolve(outputDir) + path.sep;
+  if (!resolved.startsWith(resolvedBase)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
