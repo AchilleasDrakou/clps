@@ -15,16 +15,10 @@ import type { DemoBeat } from "@/lib/pipeline/types";
 /* ── Discovering ── */
 interface DiscoveringDetailProps {
   pages: { url: string; title: string }[];
-  query?: string;
 }
 
-export const DiscoveringDetail = ({ pages, query }: DiscoveringDetailProps) => (
+export const DiscoveringDetail = ({ pages }: DiscoveringDetailProps) => (
   <div className="space-y-2 pl-7">
-    {query && (
-      <p className="text-xs text-gray-500 italic">
-        Searching: &ldquo;{query}&rdquo;
-      </p>
-    )}
     {pages.map((page, i) => (
       <motion.div
         key={page.url}

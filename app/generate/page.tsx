@@ -120,7 +120,6 @@ export default function GeneratePage() {
     {}
   );
 
-  const idCounter = useRef(0);
   const startedRef = useRef(false);
   const beatsRef = useRef<DemoBeat[]>([]);
   const startTime = useRef(Date.now());
@@ -359,7 +358,7 @@ export default function GeneratePage() {
             <ArrowLeft size={16} />
           </a>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight">Clips</h1>
+            <h1 className="text-sm font-semibold tracking-tight font-[family-name:var(--font-display)]">Clips</h1>
             <p className="text-[11px] text-gray-500 truncate max-w-sm">
               {new URL(url.startsWith("http") ? url : `https://${url}`)
                 .hostname}
