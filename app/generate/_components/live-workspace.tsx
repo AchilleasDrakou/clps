@@ -28,7 +28,7 @@ interface FileOp {
 }
 
 interface LiveWorkspaceProps {
-  currentStage: string;
+  currentStage: PipelineStage | "";
   // Discovery
   searchQuery?: string;
   discoveredPages: { url: string; title: string; favicon?: string }[];
@@ -489,6 +489,13 @@ export function LiveWorkspace(props: LiveWorkspaceProps) {
           {isComplete && (
             <motion.div key="complete" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="h-full">
               <CompleteView finalVideoPath={finalVideoPath!} elapsed={elapsed} />
+            </motion.div>
+          )}
+
+          {currentStage === "complete" && !finalVideoPath && (
+            <motion.div key="finalizing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center">
+              <Loader2 size={20} className="animate-spin text-emerald-400 mb-4" />
+              <p className="text-sm text-gray-400">Finalizing video...</p>
             </motion.div>
           )}
 

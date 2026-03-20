@@ -481,7 +481,7 @@ function GeneratePage() {
         {/* ── Left panel: Live Workspace ── */}
         <div className="flex-1 flex flex-col min-w-0">
           <LiveWorkspace
-            currentStage={currentStage}
+            currentStage={currentStage as PipelineStage | ""}
             searchQuery={searchQuery}
             discoveredPages={discoveredPages}
             scrapeProgress={scrapeProgress}

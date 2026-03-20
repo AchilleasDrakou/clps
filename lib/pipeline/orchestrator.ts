@@ -13,7 +13,7 @@ export async function runPipeline(
   options?: PipelineOptions,
   cachedMainPage?: { url: string; title: string; description: string; markdown: string }
 ): Promise<PipelineResult> {
-  const { mode = "headless", onEvent } = options ?? {};
+  const { mode = "headless", onEvent, signal } = options ?? {};
   const runId = `demo-${Date.now()}`;
   const outputDir = path.join(process.cwd(), "output", runId);
   await fs.mkdir(outputDir, { recursive: true });
@@ -86,7 +86,7 @@ export async function runPipeline(
   emit({ stage: "narrating", message: "Generating voiceover...", percent: 40 });
 
   const [capture, narration] = await Promise.all([
-    captureDemo(plan, outputDir, isVisual ? emit : undefined).then((c) => {
+    captureDemo(plan, outputDir, isVisual ? emit : undefined, signal).then((c) => {
       emit({ stage: "capturing", message: "Recording complete", percent: 62, data: { liveViewUrl: c.liveViewUrl } });
       return c;
     }),

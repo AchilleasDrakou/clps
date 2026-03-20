@@ -95,7 +95,8 @@ function startRecorder(
 export async function captureDemo(
   plan: DemoPlan,
   outputDir: string,
-  visualEmit?: EmitFn
+  visualEmit?: EmitFn,
+  signal?: AbortSignal
 ): Promise<CaptureResult> {
   const session = await fcFetch("/browser", { ttl: 120, activityTtl: 60 });
   if (!session.id || !session.cdpUrl) {
@@ -130,6 +131,10 @@ export async function captureDemo(
     const actionResults = [];
     const runId = path.basename(outputDir);
     for (let i = 0; i < plan.actions.length; i++) {
+      if (signal?.aborted) {
+        console.log("[Capture] Aborted — stopping action execution");
+        break;
+      }
       const action = plan.actions[i];
       const code = actionToPlaywright(action);
 

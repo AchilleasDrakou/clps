@@ -84,6 +84,7 @@ export type PipelineMode = "visual" | "headless";
 export interface PipelineOptions {
   mode: PipelineMode;
   onEvent?: (event: PipelineEvent) => void;
+  signal?: AbortSignal;
 }
 
 /* ── Pipeline Stages & Events ── */
