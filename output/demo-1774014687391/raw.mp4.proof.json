@@ -1,0 +1,139 @@
+{
+  "output": "/Users/achilleasdrakou/Documents/GitHub/clps/output/demo-1774014687391/raw.mp4",
+  "demoPlan": {
+    "beats": [
+      {
+        "id": "beat-1",
+        "kind": "establish",
+        "label": "Homepage overview",
+        "caption": "Pelian homepage showing services and portfolio",
+        "narrationText": "Pelian builds custom AI solutions that transform businesses. Today, let's look at one of our recent projects.",
+        "holdMs": 2000,
+        "actionIndex": 0,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      },
+      {
+        "id": "beat-2",
+        "kind": "overview",
+        "label": "Scroll to Our Work",
+        "caption": "Portfolio section with project cards",
+        "narrationText": "In our portfolio, you'll see real-world applications of our AI engineering expertise.",
+        "holdMs": 1500,
+        "actionIndex": 1,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "subtle"
+        }
+      },
+      {
+        "id": "beat-3",
+        "kind": "hover",
+        "label": "Hover FlexPay",
+        "caption": "FlexPay project card highlighted",
+        "narrationText": "Here's FlexPay - a phone financing platform we built for the fintech sector.",
+        "holdMs": 800,
+        "actionIndex": 2,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-4",
+        "kind": "click",
+        "label": "Click FlexPay",
+        "caption": "Clicking the FlexPay project card",
+        "narrationText": "Let's dive into the details of this project.",
+        "holdMs": 800,
+        "actionIndex": 3,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-5",
+        "kind": "reveal",
+        "label": "FlexPay project page",
+        "caption": "FlexPay project details page loads",
+        "narrationText": "This is the FlexPay case study. We developed an AI-powered platform that streamlines phone financing approvals and risk assessment.",
+        "holdMs": 1800,
+        "actionIndex": 4,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "hero"
+        }
+      },
+      {
+        "id": "beat-6",
+        "kind": "reveal",
+        "label": "Scroll details",
+        "caption": "Scrolling through project achievements",
+        "narrationText": "The platform reduced approval times by 85% and increased conversion rates through intelligent automation.",
+        "holdMs": 1800,
+        "actionIndex": 5,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-7",
+        "kind": "outro",
+        "label": "Summary",
+        "caption": "FlexPay project highlights",
+        "narrationText": "FlexPay demonstrates how Pelian delivers measurable results through custom AI solutions - transforming complex processes into seamless experiences.",
+        "holdMs": 2500,
+        "actionIndex": 5,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      }
+    ]
+  },
+  "actionResults": [
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 0
+    },
+    {
+      "type": "wait_for",
+      "selector": "a[href*='work/flexpay']",
+      "ok": true,
+      "index": 1
+    },
+    {
+      "type": "hover",
+      "selector": "a[href*='work/flexpay']",
+      "ok": true,
+      "index": 2
+    },
+    {
+      "type": "click",
+      "selector": "a[href*='work/flexpay']",
+      "ok": true,
+      "index": 3
+    },
+    {
+      "type": "wait_for",
+      "selector": "h1, h2",
+      "ok": true,
+      "index": 4
+    },
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 5
+    }
+  ],
+  "metrics": {
+    "estimatedDuration": 28
+  }
+}
