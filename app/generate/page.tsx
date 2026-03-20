@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   Search,
   FileText,
@@ -24,6 +24,7 @@ import type { DemoBeat, PipelineEvent, PipelineStage } from "@/lib/pipeline/type
 
 import { StageCard, type StageStatus } from "./_components/stage-card";
 import { StageTimeline } from "./_components/stage-timeline";
+import { LiveWorkspace } from "./_components/live-workspace";
 import {
   SkeletonBeats,
   SkeletonBrowser,
@@ -89,7 +90,15 @@ const getStageStatus = (
 };
 
 /* ── Page ── */
-export default function GeneratePage() {
+export default function GeneratePageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#09090b]" />}>
+      <GeneratePage />
+    </Suspense>
+  );
+}
+
+function GeneratePage() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url") ?? "";
   const feature = searchParams.get("feature") ?? "";
@@ -115,9 +124,14 @@ export default function GeneratePage() {
   const [finalVideoPath, setFinalVideoPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  // Track the stage where error occurred for proper status display
   const [errorStage, setErrorStage] = useState<string>("");
-  // Store latest message per stage — use ref + state to avoid recreating map on every event
+  // Visual workspace state
+  const [searchQuery, setSearchQuery] = useState<string | undefined>();
+  const [scrapeProgress, setScrapeProgress] = useState<{ url: string; title: string; charCount: number; tokenEstimate: number }[]>([]);
+  const [currentAction, setCurrentAction] = useState<{ index: number; total: number; type: string; selector?: string; text?: string } | undefined>();
+  const [screenshots, setScreenshots] = useState<{ url: string; actionIndex: number }[]>([]);
+  const [fileOps, setFileOps] = useState<{ type: "write" | "read"; path: string; sizeKb?: number }[]>([]);
+  // Store latest message per stage
   const latestMessageRef = useRef<Record<string, string>>({});
   const [latestMessage, setLatestMessage] = useState<Record<string, string>>(
     {}
@@ -230,6 +244,13 @@ export default function GeneratePage() {
     // Final video
     if (event.data?.finalVideoPath)
       setFinalVideoPath(event.data.finalVideoPath);
+
+    // Visual workspace events
+    if (event.data?.searchQuery) setSearchQuery(event.data.searchQuery);
+    if (event.data?.scrapeProgress) setScrapeProgress((prev) => [...prev, event.data!.scrapeProgress!]);
+    if (event.data?.currentAction) setCurrentAction(event.data.currentAction);
+    if (event.data?.screenshot) setScreenshots((prev) => [...prev, event.data!.screenshot!]);
+    if (event.data?.fileOp) setFileOps((prev) => [...prev, event.data!.fileOp!]);
 
     // Error — track which stage the error occurred in
     if (event.data?.error) {
@@ -457,105 +478,25 @@ export default function GeneratePage() {
 
       {/* ── Main workspace ── */}
       <div className="flex-1 flex overflow-hidden relative z-10">
-        {/* ── Left panel ── */}
+        {/* ── Left panel: Live Workspace ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-4 py-2 text-[11px] text-gray-600 border-b border-white/[0.06] flex items-center gap-2 shrink-0 uppercase tracking-widest">
-            <motion.span
-              className="w-1.5 h-1.5 rounded-full"
-              animate={{
-                backgroundColor: showBrowser
-                  ? "#22c55e"
-                  : showVideo
-                  ? "#10b981"
-                  : "#374151",
-              }}
-              transition={{ duration: 0.3 }}
-            />
-            {showVideo ? (
-              <>
-                <Play size={11} />
-                <span>Final Output</span>
-              </>
-            ) : showBrowser ? (
-              <>
-                <Monitor size={11} />
-                <span>Live Browser</span>
-              </>
-            ) : (
-              <>
-                <Monitor size={11} />
-                <span>Pipeline</span>
-              </>
-            )}
-          </div>
-          <div className="flex-1 bg-[#050506] flex items-center justify-center relative overflow-hidden">
-            <AnimatePresence mode="wait">
-              {showVideo ? (
-                <motion.div
-                  key="video"
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="w-full h-full flex items-center justify-center p-8"
-                >
-                  <div className="w-full max-w-3xl">
-                    <video
-                      src={`/api/video?path=${encodeURIComponent(finalVideoPath!)}`}
-                      controls
-                      autoPlay
-                      className="w-full rounded-xl shadow-2xl shadow-black/60 border border-white/[0.06]"
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="flex items-center justify-center gap-3 mt-5"
-                    >
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                      <span className="text-sm text-emerald-400 font-medium">
-                        Demo ready
-                      </span>
-                      <span className="text-[11px] text-gray-600 font-mono tabular-nums">
-                        {formatTime(elapsed)} total
-                      </span>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : showBrowser ? (
-                <motion.div
-                  key="browser"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-full h-full"
-                >
-                  <iframe
-                    src={liveViewUrl!}
-                    className="w-full h-full"
-                    sandbox="allow-scripts allow-same-origin"
-                    title="Live browser preview"
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="timeline"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="w-full h-full"
-                >
-                  <StageTimeline
-                    currentStage={
-                      (currentStage as PipelineStage) || "discovering"
-                    }
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <LiveWorkspace
+            currentStage={currentStage}
+            searchQuery={searchQuery}
+            discoveredPages={discoveredPages}
+            scrapeProgress={scrapeProgress}
+            beats={beats}
+            currentAction={currentAction}
+            screenshots={screenshots}
+            liveViewUrl={liveViewUrl}
+            percent={percent}
+            narrationScript={narrationScript}
+            narrationProgress={narrationProgress}
+            beatsRef={beatsRef.current}
+            fileOps={fileOps}
+            finalVideoPath={finalVideoPath}
+            elapsed={elapsed}
+          />
         </div>
 
         {/* ── Right panel: Stage accordion ── */}
@@ -563,12 +504,14 @@ export default function GeneratePage() {
           <div className="px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-[0.2em] border-b border-white/[0.06] shrink-0">
             Pipeline
           </div>
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
+            <LayoutGroup>
             <AnimatePresence mode="popLayout">
-              {visibleStages.map((stage) => {
+              {visibleStages.map((stage, idx) => {
                 const cfg = STAGE_CONFIG[stage];
                 if (!cfg) return null;
                 const status = getStatus(stage);
+                const isLast = idx === visibleStages.length - 1;
 
                 return (
                   <StageCard
@@ -577,6 +520,7 @@ export default function GeneratePage() {
                     label={cfg.label}
                     color={cfg.color}
                     status={status}
+                    showConnector={!isLast}
                     badge={
                       status === "done"
                         ? summaries[stage as keyof typeof summaries]
@@ -676,6 +620,7 @@ export default function GeneratePage() {
                 );
               })}
             </AnimatePresence>
+            </LayoutGroup>
 
             {/* Complete card */}
             {currentStage === "complete" ? (

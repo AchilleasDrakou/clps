@@ -1,6 +1,9 @@
 import { spawn } from "child_process";
+import fsPromises from "fs/promises";
 import path from "path";
-import { DemoAction, DemoPlan, CaptureResult } from "./types";
+import { DemoAction, DemoPlan, CaptureResult, PipelineEvent } from "./types";
+
+type EmitFn = (event: PipelineEvent) => void;
 
 const FIRECRAWL_API = "https://api.firecrawl.dev/v2";
 const API_KEY = () => process.env.FIRECRAWL_API_KEY!;
@@ -71,7 +74,7 @@ function startRecorder(
     "--width", "1280",
     "--height", "720",
     "--fps", "15",
-    "--quality", "85",
+    "--jpeg-quality", "85",
   ]);
 
   let stderr = "";
@@ -91,7 +94,8 @@ function startRecorder(
 
 export async function captureDemo(
   plan: DemoPlan,
-  outputDir: string
+  outputDir: string,
+  visualEmit?: EmitFn
 ): Promise<CaptureResult> {
   const session = await fcFetch("/browser", { ttl: 120, activityTtl: 60 });
   if (!session.id || !session.cdpUrl) {
@@ -118,22 +122,50 @@ export async function captureDemo(
     recorder = startRecorder(cdpUrl, rawVideoPath, estimatedDuration);
     await new Promise((r) => setTimeout(r, 1000)); // 1s instead of 2s
 
+    // Screenshot directory for visual mode
+    const screenshotDir = path.join(outputDir, "screenshots");
+    if (visualEmit) await fsPromises.mkdir(screenshotDir, { recursive: true });
+
     // Execute actions one at a time — resilient to individual failures
     const actionResults = [];
+    const runId = path.basename(outputDir);
     for (let i = 0; i < plan.actions.length; i++) {
       const action = plan.actions[i];
       const code = actionToPlaywright(action);
+
+      // Visual: emit currentAction BEFORE execution
+      if (visualEmit) {
+        visualEmit({ stage: "capturing", message: `${action.type} ${action.selector ?? ""}`.trim(), percent: 45 + Math.round((i / plan.actions.length) * 15), data: { currentAction: { index: i, total: plan.actions.length, type: action.type, selector: action.selector, text: action.text } } });
+      }
+
       try {
         await fcFetch(`/browser/${sessionId}/execute`, {
           code,
           language: "node",
-          timeout: 15, // 15s per action max
+          timeout: 15,
         });
         actionResults.push({ type: action.type, selector: action.selector, ok: true, index: i });
+
+        // Visual: capture screenshot after successful action (async, don't block on failure)
+        if (visualEmit) {
+          try {
+            const screenshotResult = await fcFetch(`/browser/${sessionId}/execute`, {
+              code: `const buf = await page.screenshot({ type: 'jpeg', quality: 60 });\nreturn buf.toString('base64');`,
+              language: "node",
+              timeout: 5,
+            });
+            if (screenshotResult.result) {
+              const filename = `action-${i}.jpg`;
+              await fsPromises.writeFile(path.join(screenshotDir, filename), Buffer.from(screenshotResult.result, "base64"));
+              visualEmit({ stage: "capturing", message: `Screenshot ${i + 1}/${plan.actions.length}`, percent: 45 + Math.round((i / plan.actions.length) * 15), data: { screenshot: { url: `/api/artifacts/${runId}/screenshots/${filename}`, actionIndex: i } } });
+            }
+          } catch {
+            // Screenshot failed — don't block pipeline
+          }
+        }
       } catch (err: any) {
         console.warn(`[Capture] Action ${i} failed: ${err.message}`);
         actionResults.push({ type: action.type, selector: action.selector, ok: false, index: i });
-        // Continue — don't let one failed action kill the whole capture
       }
     }
 
@@ -149,8 +181,7 @@ export async function captureDemo(
       metrics: { estimatedDuration },
     };
 
-    const fs = await import("fs/promises");
-    await fs.writeFile(sidecarPath, JSON.stringify(sidecar, null, 2));
+    await fsPromises.writeFile(sidecarPath, JSON.stringify(sidecar, null, 2));
 
     return { rawVideoPath, sidecarPath, liveViewUrl, durationMs: estimatedDuration * 1000 };
   } finally {

@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { DemoBrief, DiscoveredPage, PipelineEvent, PipelineResult } from "./types";
+import { DemoBrief, DiscoveredPage, PipelineEvent, PipelineOptions, PipelineResult } from "./types";
 import { discoverPages, scrapePage } from "./discover";
 import { planDemo } from "./plan";
 import { captureDemo } from "./capture";
@@ -8,22 +8,23 @@ import { renderCinematic } from "./render";
 import { narrateBeats } from "./narrate";
 import { mergeVideoAudio } from "./merge";
 
-export type ProgressCallback = (event: PipelineEvent) => void;
-
 export async function runPipeline(
   brief: DemoBrief,
-  onProgress?: ProgressCallback,
+  options?: PipelineOptions,
   cachedMainPage?: { url: string; title: string; description: string; markdown: string }
 ): Promise<PipelineResult> {
+  const { mode = "headless", onEvent } = options ?? {};
   const runId = `demo-${Date.now()}`;
   const outputDir = path.join(process.cwd(), "output", runId);
   await fs.mkdir(outputDir, { recursive: true });
 
-  const emit = (event: PipelineEvent) => onProgress?.(event);
+  const emit = (event: PipelineEvent) => onEvent?.(event);
+  const isVisual = mode === "visual";
 
   // 1. Discover — search returns markdown inline, so no separate scraping needed
-  // If we have cached main page from pre-scrape, skip that scrape entirely
-  emit({ stage: "discovering", message: `Searching for "${brief.feature}"...`, percent: 5 });
+  const hostname = new URL(brief.url.startsWith("http") ? brief.url : `https://${brief.url}`).hostname;
+  const searchQuery = `${brief.feature} site:${hostname}`;
+  emit({ stage: "discovering", message: `Searching for "${brief.feature}"...`, percent: 5, data: { searchQuery } });
 
   const [searchResults, mainPage] = await Promise.all([
     discoverPages(brief),
@@ -35,12 +36,27 @@ export async function runPipeline(
   // Search results already have markdown — use directly, don't re-scrape
   const pages = [mainPage, ...searchResults.filter((p) => p.url !== brief.url)].slice(0, 3);
 
+  // Emit per-page discovery events in visual mode
+  if (isVisual) {
+    for (const page of pages) {
+      emit({ stage: "discovering", message: `Found: ${page.title || page.url}`, percent: 10, data: { pageDiscovered: { url: page.url, title: page.title } } });
+    }
+  }
+
   emit({
     stage: "understanding",
     message: `${pages.length} pages ready${cachedMainPage ? " (pre-cached)" : ""}`,
     percent: 20,
     data: { pages: pages.map((p) => ({ url: p.url, title: p.title })) },
   });
+
+  // Emit per-page scrape progress in visual mode
+  if (isVisual) {
+    for (const page of pages) {
+      const charCount = page.markdown.length;
+      emit({ stage: "understanding", message: `Scraped: ${page.title || page.url}`, percent: 20, data: { scrapeProgress: { url: page.url, title: page.title, charCount, tokenEstimate: Math.ceil(charCount / 4) } } });
+    }
+  }
 
   // 2. Plan
   emit({ stage: "planning", message: "Generating demo plan...", percent: 25 });
@@ -59,25 +75,19 @@ export async function runPipeline(
     },
   });
 
-  await fs.writeFile(path.join(outputDir, "plan.json"), JSON.stringify(plan, null, 2));
+  const planJson = JSON.stringify(plan, null, 2);
+  await fs.writeFile(path.join(outputDir, "plan.json"), planJson);
+  if (isVisual) {
+    emit({ stage: "planning", message: "Saved plan.json", percent: 36, data: { fileOp: { type: "write", path: `output/${runId}/plan.json`, sizeKb: Math.ceil(planJson.length / 1024) } } });
+  }
 
   // 3. Capture + Narration in parallel
-  // Both emit their own stage events — UI should show both as active
   emit({ stage: "capturing", message: "Launching browser...", percent: 40 });
   emit({ stage: "narrating", message: "Generating voiceover...", percent: 40 });
 
   const [capture, narration] = await Promise.all([
-    captureDemo(plan, outputDir).then((c) => {
+    captureDemo(plan, outputDir, isVisual ? emit : undefined).then((c) => {
       emit({ stage: "capturing", message: "Recording complete", percent: 62, data: { liveViewUrl: c.liveViewUrl } });
-      for (let i = 0; i < plan.actions.length; i++) {
-        const a = plan.actions[i];
-        emit({
-          stage: "capturing",
-          message: `${a.type} ${a.selector ?? ""}`.trim(),
-          percent: 45 + Math.round((i / plan.actions.length) * 15),
-          data: { actionResult: { index: i, type: a.type, selector: a.selector, ok: true } },
-        });
-      }
       return c;
     }),
     (async () => {
