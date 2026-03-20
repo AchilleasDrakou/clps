@@ -74,10 +74,14 @@ function startRecorder(
     "--quality", "85",
   ]);
 
+  let stderr = "";
+  proc.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+  proc.stdout?.on("data", (d: Buffer) => { console.log(`[recorder] ${d.toString().trim()}`); });
+
   const done = new Promise<void>((resolve, reject) => {
     proc.on("close", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`agent-recorder exited with code ${code}`));
+      else reject(new Error(`agent-recorder exited ${code}: ${stderr.slice(-300)}`));
     });
     proc.on("error", reject);
   });

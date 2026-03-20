@@ -1,0 +1,146 @@
+{
+  "output": "/Users/achilleasdrakou/Documents/GitHub/clps/output/demo-1774030497970/raw.mp4",
+  "demoPlan": {
+    "beats": [
+      {
+        "id": "beat-1",
+        "kind": "establish",
+        "label": "Homepage overview",
+        "caption": "Pelian homepage showing AI development services",
+        "narrationText": "Pelian builds end-to-end AI solutions that transform businesses.",
+        "holdMs": 2000,
+        "actionIndex": 0,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      },
+      {
+        "id": "beat-2",
+        "kind": "click",
+        "label": "Navigate to services",
+        "caption": "Clicking 'Our services' in navigation",
+        "narrationText": "Let's explore their AI services portfolio.",
+        "holdMs": 800,
+        "actionIndex": 1,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "subtle"
+        }
+      },
+      {
+        "id": "beat-3",
+        "kind": "reveal",
+        "label": "Services section",
+        "caption": "AI services section with categories",
+        "narrationText": "They offer agent orchestration, voice AI, and custom applications - all built to integrate seamlessly.",
+        "holdMs": 1800,
+        "actionIndex": 2,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      },
+      {
+        "id": "beat-4",
+        "kind": "scroll",
+        "label": "Scroll to work",
+        "caption": "Scrolling down to 'Our work' section",
+        "narrationText": "Now let's see their portfolio of completed projects.",
+        "holdMs": 1200,
+        "actionIndex": 2,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "subtle"
+        }
+      },
+      {
+        "id": "beat-5",
+        "kind": "hover",
+        "label": "Preview Juno project",
+        "caption": "Hovering over Juno Maternal Health Agent project",
+        "narrationText": "Here's Juno - a maternal health AI agent they built for healthcare.",
+        "holdMs": 1500,
+        "actionIndex": 3,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-6",
+        "kind": "click",
+        "label": "Open Juno details",
+        "caption": "Clicking on Juno project card",
+        "narrationText": "Let's dive into this healthcare AI solution.",
+        "holdMs": 800,
+        "actionIndex": 4,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "hero"
+        }
+      },
+      {
+        "id": "beat-7",
+        "kind": "reveal",
+        "label": "Juno project page",
+        "caption": "Juno project details page loads",
+        "narrationText": "This shows how Pelian builds specialized AI agents that deliver measurable results in critical industries like healthcare.",
+        "holdMs": 1800,
+        "actionIndex": 4,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      },
+      {
+        "id": "beat-8",
+        "kind": "outro",
+        "label": "Demo conclusion",
+        "caption": "Juno project page displayed",
+        "narrationText": "That's how Pelian transforms ideas into AI-powered products - from healthcare agents to enterprise solutions, delivered in weeks with proven results.",
+        "holdMs": 2500,
+        "actionIndex": 4,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      }
+    ]
+  },
+  "actionResults": [
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 0
+    },
+    {
+      "type": "click",
+      "selector": "a[href*='#services']",
+      "ok": true,
+      "index": 1
+    },
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 2
+    },
+    {
+      "type": "hover",
+      "selector": "a[href*='work/ai-health-app']",
+      "ok": true,
+      "index": 3
+    },
+    {
+      "type": "click",
+      "selector": "a[href*='work/ai-health-app']",
+      "ok": true,
+      "index": 4
+    }
+  ],
+  "metrics": {
+    "estimatedDuration": 18
+  }
+}

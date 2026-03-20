@@ -29,10 +29,17 @@ export async function renderCinematic(
       }
     );
   } catch (err) {
-    // If Remotion render fails, fall back to raw video
-    console.warn("Remotion render failed, using raw video:", err);
+    // If Remotion render fails, fall back to raw video if it exists
+    console.warn("Remotion render failed:", err);
     const fs = await import("fs/promises");
-    await fs.copyFile(capture.rawVideoPath, studioVideoPath);
+    try {
+      await fs.access(capture.rawVideoPath);
+      await fs.copyFile(capture.rawVideoPath, studioVideoPath);
+    } catch {
+      // No raw video either — create empty placeholder so merge doesn't crash
+      console.warn("No raw video found — capture likely failed");
+      throw new Error("No video captured. Browser recording failed — check CDP connection.");
+    }
   }
 
   // Extract beat timings from plan
