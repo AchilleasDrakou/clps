@@ -38,6 +38,13 @@ export default function Home() {
       if (!url.trim()) return;
       setFlowState("brief-builder");
       setTimeout(() => featureInputRef.current?.focus(), 450);
+
+      // Pre-scrape in background — cached server-side for generate page
+      fetch("/api/prescrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      }).catch(() => {}); // non-critical — pipeline will scrape if cache miss
     },
     [url]
   );

@@ -1,0 +1,120 @@
+{
+  "output": "/Users/achilleasdrakou/Documents/GitHub/clps/output/demo-1774025238641/raw.mp4",
+  "demoPlan": {
+    "beats": [
+      {
+        "id": "beat-1",
+        "kind": "establish",
+        "label": "Homepage Overview",
+        "caption": "Pelian homepage showing services and portfolio",
+        "narrationText": "Pelian builds end-to-end AI engineering solutions that transform businesses.",
+        "holdMs": 2000,
+        "actionIndex": 0,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      },
+      {
+        "id": "beat-2",
+        "kind": "click",
+        "label": "Click Juno Project",
+        "caption": "Clicking on the Juno healthcare project",
+        "narrationText": "Let me show you our Juno project - a maternal health AI agent we built for healthcare.",
+        "holdMs": 800,
+        "actionIndex": 1,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-3",
+        "kind": "reveal",
+        "label": "Juno Project Page",
+        "caption": "Juno project details page loads",
+        "narrationText": "Here's Juno in action. This AI agent helps healthcare providers with maternal health support, processing medical documents and providing instant insights.",
+        "holdMs": 1800,
+        "actionIndex": 2,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "hero"
+        }
+      },
+      {
+        "id": "beat-4",
+        "kind": "hover",
+        "label": "Hover Juno Demo",
+        "caption": "Hovering over Juno interface elements",
+        "narrationText": "Juno can summarize medical reports, answer questions from thousands of documents, and provide real-time support - all while maintaining strict healthcare compliance.",
+        "holdMs": 1800,
+        "actionIndex": 3,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "detail"
+        }
+      },
+      {
+        "id": "beat-5",
+        "kind": "reveal",
+        "label": "Scroll Results",
+        "caption": "Scrolling to show results and metrics",
+        "narrationText": "For our client, Juno reduced document review time from hours to seconds, giving medical teams instant access to critical information.",
+        "holdMs": 1800,
+        "actionIndex": 4,
+        "camera": {
+          "mode": "focus",
+          "emphasis": "subtle"
+        }
+      },
+      {
+        "id": "beat-6",
+        "kind": "outro",
+        "label": "Summary",
+        "caption": "Back to portfolio overview",
+        "narrationText": "That's Juno - just one example of how Pelian builds AI agents that deliver real business impact. Ready to transform your operations with AI?",
+        "holdMs": 2500,
+        "actionIndex": null,
+        "camera": {
+          "mode": "overview",
+          "emphasis": "wide"
+        }
+      }
+    ]
+  },
+  "actionResults": [
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 0
+    },
+    {
+      "type": "click",
+      "selector": "a[href*='work/ai-health-app']",
+      "ok": true,
+      "index": 1
+    },
+    {
+      "type": "wait_for",
+      "selector": "h1",
+      "ok": true,
+      "index": 2
+    },
+    {
+      "type": "hover",
+      "selector": "img[alt*='Juno']",
+      "ok": false,
+      "index": 3
+    },
+    {
+      "type": "scroll",
+      "selector": "body",
+      "ok": true,
+      "index": 4
+    }
+  ],
+  "metrics": {
+    "estimatedDuration": 18
+  }
+}

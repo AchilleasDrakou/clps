@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { runPipeline } from "@/lib/pipeline/orchestrator";
 import { DemoBrief, PipelineEvent } from "@/lib/pipeline/types";
 import { validateUrl } from "@/lib/pipeline/validate";
+import { getPrescrape } from "@/lib/prescrape-cache";
 
 export const maxDuration = 300; // 5 min max for serverless
 
@@ -43,7 +44,9 @@ export async function POST(req: NextRequest) {
 
       try {
         send({ stage: "discovering", message: "Pipeline started...", percent: 1 });
-        await runPipeline(brief, send);
+        // Look up pre-scraped data from server cache (not from client — security)
+        const cachedPage = getPrescrape(validatedUrl);
+        await runPipeline(brief, send, cachedPage);
       } catch (err: any) {
         console.error("[SSE] Pipeline error:", err);
         send({

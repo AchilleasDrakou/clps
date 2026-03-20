@@ -72,19 +72,19 @@ const STAGE_INDEX = new Map<string, number>(
 
 const getStageStatus = (
   stage: PipelineStage,
-  currentStage: string
+  activeStages: Set<string>,
+  completedStages: Set<string>,
+  hasError: boolean
 ): StageStatus => {
-  if (currentStage === "complete") return "done";
-  if (currentStage === "error") {
-    // error isn't in PIPELINE_STAGES — find the last known stage from the index
-    // All stages before the error point are done, the rest are upcoming
-    // Since we can't know exactly where the error happened, mark all visited as done
-    return "upcoming";
+  if (hasError && activeStages.has(stage)) return "error";
+  if (completedStages.has(stage)) return "done";
+  if (activeStages.has(stage)) return "active";
+  // Check if any active stage is after this one — means this is done
+  for (const active of activeStages) {
+    const activeIdx = STAGE_INDEX.get(active) ?? -1;
+    const stageIdx = STAGE_INDEX.get(stage) ?? -1;
+    if (stageIdx < activeIdx) return "done";
   }
-  const currentIdx = STAGE_INDEX.get(currentStage) ?? -1;
-  const stageIdx = STAGE_INDEX.get(stage) ?? -1;
-  if (stageIdx < currentIdx) return "done";
-  if (stageIdx === currentIdx) return "active";
   return "upcoming";
 };
 
@@ -98,6 +98,9 @@ export default function GeneratePage() {
 
   const [percent, setPercent] = useState(0);
   const [currentStage, setCurrentStage] = useState<string>("");
+  const [activeStages, setActiveStages] = useState<Set<string>>(new Set());
+  const [completedStages, setCompletedStages] = useState<Set<string>>(new Set());
+  const [hasError, setHasError] = useState(false);
   const [discoveredPages, setDiscoveredPages] = useState<
     { url: string; title: string }[]
   >([]);
@@ -140,6 +143,41 @@ export default function GeneratePage() {
   const handleEvent = useCallback((event: PipelineEvent) => {
     setPercent(event.percent);
     setCurrentStage(event.stage);
+
+    // Track active + completed stages for parallel display
+    if (event.stage === "complete") {
+      setActiveStages(new Set());
+      setCompletedStages(new Set(PIPELINE_STAGES));
+    } else if (event.stage === "error") {
+      setHasError(true);
+    } else {
+      setActiveStages((prev) => {
+        const next = new Set(prev);
+        next.add(event.stage);
+        // If a later stage appears, mark earlier ones as no longer active
+        // But keep parallel stages (capturing + narrating) both active
+        return next;
+      });
+      // Mark stages as completed when we get a new stage that's after them
+      // (except parallel stages)
+      const PARALLEL_PAIRS = new Set(["capturing", "narrating"]);
+      setCompletedStages((prev) => {
+        const next = new Set(prev);
+        const eventIdx = STAGE_INDEX.get(event.stage) ?? -1;
+        for (const s of PIPELINE_STAGES) {
+          const sIdx = STAGE_INDEX.get(s) ?? -1;
+          if (sIdx < eventIdx && !PARALLEL_PAIRS.has(s)) {
+            next.add(s);
+          }
+        }
+        // If rendering/merging starts, capture+narrate are done
+        if (event.stage === "rendering" || event.stage === "merging") {
+          next.add("capturing");
+          next.add("narrating");
+        }
+        return next;
+      });
+    }
 
     // Track visited stages
     visitedStagesRef.current.add(event.stage);
@@ -286,25 +324,24 @@ export default function GeneratePage() {
     if (!currentStage) return PIPELINE_STAGES.slice(0, 1);
     if (currentStage === "complete" || currentStage === "error")
       return PIPELINE_STAGES;
-    const currentIdx = STAGE_INDEX.get(currentStage) ?? 0;
+    // Show all stages up to 2 ahead of the furthest active stage
+    let maxIdx = STAGE_INDEX.get(currentStage) ?? 0;
+    for (const s of activeStages) {
+      const idx = STAGE_INDEX.get(s) ?? 0;
+      if (idx > maxIdx) maxIdx = idx;
+    }
     return PIPELINE_STAGES.slice(
       0,
-      Math.min(PIPELINE_STAGES.length, currentIdx + 3)
+      Math.min(PIPELINE_STAGES.length, maxIdx + 3)
     );
-  }, [currentStage]);
+  }, [currentStage, activeStages]);
 
-  // Proper error-aware stage status
+  // Stage status using Set-based tracking for parallel stages
   const getStatus = useCallback(
     (stage: PipelineStage): StageStatus => {
-      if (currentStage === "error") {
-        if (visitedStagesRef.current.has(stage)) {
-          return stage === errorStage ? "error" : "done";
-        }
-        return "upcoming";
-      }
-      return getStageStatus(stage, currentStage);
+      return getStageStatus(stage, activeStages, completedStages, hasError);
     },
-    [currentStage, errorStage]
+    [activeStages, completedStages, hasError]
   );
 
   /* ── Left panel state ── */

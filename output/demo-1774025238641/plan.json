@@ -1,0 +1,132 @@
+{
+  "brief": {
+    "url": "https://pelian.ai/",
+    "feature": "showcase my juno work",
+    "audience": "general",
+    "tone": "professional"
+  },
+  "pages": [
+    {
+      "url": "https://pelian.ai/",
+      "title": "Pelian - AI Development Agency | AI Agents, Voice AI, Custom Apps",
+      "description": "Pelian is an AI development agency that builds AI agents, voice AI, custom applications, and workflow automation. Founded in 2023. Ships in weeks, not quarters.",
+      "markdown": "Pelian\n\n# End-to-end AIengineering &transformation.\n\n[Our services](https://www.pelian.ai/#services) Contact us\n\nEveryideacouldbecomeaproduct.Everyproductcoulddomorewithless.Everyweekyouwait,thegapgetswider.\n\n## Our services\n\nAgents that replace entire roles. Products that learn from every user. Systems that run without you.Built in weeks.\n\n### AI on your team\n\nSiena Sinner\n\nSummarize this report\n\nreport-2025.pdf\n\nAI\n\nAI agent\n\nThinking\n\n### Agent Orchestration\n\nAutonomous agents that own entire workflows - sourcing deals, running campaigns, processing applications. Not bots. Teammates that never sleep.\n\n### Voice Agents\n\nAI that handles calls, books meetings, and qualifies leads without anyone picking up the phone. One client automated 60% of inbound calls.\n\n### AI in your products\n\n### Document Retrieval\n\nInstant answers from every doc your company has ever created. Like a teammate with perfect memory who reads everything and forgets nothing.\n\n### Custom Applications\n\nAI-native web apps, mobile apps, and internal tools - designed, built, and shipped around your exact workflow and data.\n\n### AI in your operations\n\nHubSpot\n\nNew contact form submission\n\nAirtable\n\nAdd data to Airtable\n\nOpenAI\n\nWrite personalised message\n\n### Automate Tasks\n\nConnect HubSpot, Airtable, Slack, and your entire stack into pipelines that run 24/7. The glue work between your tools disappears.\n\n+32%\n\n15%\n\n### Business Consulting\n\nNot sure where AI fits? We audit your operations, find the highest-leverage opportunities, and build a roadmap that pays for itself.\n\n## The difference\n\n### We run on what we sell.\n\nOur own team is powered by the same AI we build for clients. We ship faster because we’ve already solved the hard problems internally.\n\n### Shipped in weeks, not quarters.\n\nNo 6-month discovery phases. You get a working system in weeks with demos along the way.\n\n### Results, not reports.\n\n4.2x ROAS. 72% cost reduction. 30 hours saved per week. Our work speaks in numbers.\n\n## Our work\n\n[HealthcareJunoMaternal Health Agent\\\\\n\\\\\n2025](https://www.pelian.ai/work/ai-health-app) [FinanceDealflow Agent\\\\\n\\\\\n2024](https://www.pelian.ai/work/dealflow-agent) [MarketingInfluencer Agent\\\\\n\\\\\n2024](https://www.pelian.ai/work/influencer-agent) [FintechFlexPayPhone Financing Platform\\\\\n\\\\\n2025](https://www.pelian.ai/work/flexpay)\n\nHover a project to preview\n\n## What our clients say\n\n“\n\n“Like adding 3 teammates overnight”\n\nPelian built a retrieval system that gives our medical team instant answers from 50K+ documents. What took hours now takes seconds.\n\nS\n\nSarah Chen\n\nCTO, MedFlow\n\n“\n\n“Replaced a full-time analyst role”\n\nThe deal sourcing agent does in minutes what took our analysts a full day. 2,400+ deals sourced, $180M in pipeline. We didn't hire another analyst - we didn't need to.\n\nJ\n\nJames Morrison\n\nPartner, Altitude Ventures\n\n“\n\n“5-person team replaced by one agent”\n\nWe had 5 people running influencer campaigns. Pelian built one agent that does all of it. Costs dropped 72%, ROAS hit 4.2x.\n\nA\n\nAmira Patel\n\nHead of Growth, NovaBrand\n\n“\n\n“Paid for itself in 4 weeks”\n\nOur voice agent handles 60% of inbound calls now. Launched a month ago, already paid for itself twice over. Best hire we never made.\n\nT\n\nTom Blackwell\n\nOperations Director, CallScale\n\n“\n\n“Like adding 3 teammates overnight”\n\nPelian built a retrieval system that gives our medical team instant answers from 50K+ documents. What took hours now takes seconds.\n\nS\n\nSarah Chen\n\nCTO, MedFlow\n\n“\n\n“Replaced a full-time analyst role”\n\nThe deal sourcing agent does in minutes what took our analysts a full day. 2,400+ deals sourced, $180M in pipeline. We didn't hire another analyst - we didn't need to.\n\nJ\n\nJames Morrison\n\nPartner, Altitude Ventures\n\n“\n\n“5-person team replaced by one agent”\n\nWe had 5 people running influencer campaigns. Pelian built one agent that does all of it. Costs dropped 72%, ROAS hit 4.2x.\n\nA\n\nAmira Patel\n\nHead of Growth, NovaBrand\n\n“\n\n“Paid for itself in 4 weeks”\n\nOur voice agent handles 60% of inbound calls now. Launched a month ago, already paid for itself twice over. Best hire we never made.\n\nT\n\nTom Blackwell\n\nOperations Director, CallScale\n\n## FAQ\n\n01What is Pelian?\n\n02What types of AI solutions do you build?\n\n03How long does a typical project take?\n\n04Do you work with startups or only enterprises?\n\n05What technologies do you use?\n\n06How do you ensure data privacy and security?\n\n07What does an engagement cost?"
+    }
+  ],
+  "actions": [
+    {
+      "type": "scroll",
+      "selector": "body",
+      "delayMs": 500
+    },
+    {
+      "type": "click",
+      "selector": "a[href*='work/ai-health-app']",
+      "delayMs": 500
+    },
+    {
+      "type": "wait_for",
+      "selector": "h1",
+      "containsText": "Juno",
+      "delayMs": 500
+    },
+    {
+      "type": "hover",
+      "selector": "img[alt*='Juno']",
+      "delayMs": 500
+    },
+    {
+      "type": "scroll",
+      "selector": "body",
+      "delayMs": 500
+    }
+  ],
+  "beats": [
+    {
+      "id": "beat-1",
+      "kind": "establish",
+      "label": "Homepage Overview",
+      "caption": "Pelian homepage showing services and portfolio",
+      "narrationText": "Pelian builds end-to-end AI engineering solutions that transform businesses.",
+      "holdMs": 2000,
+      "actionIndex": 0,
+      "camera": {
+        "mode": "overview",
+        "emphasis": "wide"
+      }
+    },
+    {
+      "id": "beat-2",
+      "kind": "click",
+      "label": "Click Juno Project",
+      "caption": "Clicking on the Juno healthcare project",
+      "narrationText": "Let me show you our Juno project - a maternal health AI agent we built for healthcare.",
+      "holdMs": 800,
+      "actionIndex": 1,
+      "camera": {
+        "mode": "focus",
+        "emphasis": "detail"
+      }
+    },
+    {
+      "id": "beat-3",
+      "kind": "reveal",
+      "label": "Juno Project Page",
+      "caption": "Juno project details page loads",
+      "narrationText": "Here's Juno in action. This AI agent helps healthcare providers with maternal health support, processing medical documents and providing instant insights.",
+      "holdMs": 1800,
+      "actionIndex": 2,
+      "camera": {
+        "mode": "overview",
+        "emphasis": "hero"
+      }
+    },
+    {
+      "id": "beat-4",
+      "kind": "hover",
+      "label": "Hover Juno Demo",
+      "caption": "Hovering over Juno interface elements",
+      "narrationText": "Juno can summarize medical reports, answer questions from thousands of documents, and provide real-time support - all while maintaining strict healthcare compliance.",
+      "holdMs": 1800,
+      "actionIndex": 3,
+      "camera": {
+        "mode": "focus",
+        "emphasis": "detail"
+      }
+    },
+    {
+      "id": "beat-5",
+      "kind": "reveal",
+      "label": "Scroll Results",
+      "caption": "Scrolling to show results and metrics",
+      "narrationText": "For our client, Juno reduced document review time from hours to seconds, giving medical teams instant access to critical information.",
+      "holdMs": 1800,
+      "actionIndex": 4,
+      "camera": {
+        "mode": "focus",
+        "emphasis": "subtle"
+      }
+    },
+    {
+      "id": "beat-6",
+      "kind": "outro",
+      "label": "Summary",
+      "caption": "Back to portfolio overview",
+      "narrationText": "That's Juno - just one example of how Pelian builds AI agents that deliver real business impact. Ready to transform your operations with AI?",
+      "holdMs": 2500,
+      "actionIndex": null,
+      "camera": {
+        "mode": "overview",
+        "emphasis": "wide"
+      }
+    }
+  ],
+  "narrationScript": [
+    "Pelian builds end-to-end AI engineering solutions that transform businesses.",
+    "Let me show you our Juno project - a maternal health AI agent we built for healthcare.",
+    "Here's Juno in action. This AI agent helps healthcare providers with maternal health support, processing medical documents and providing instant insights.",
+    "Juno can summarize medical reports, answer questions from thousands of documents, and provide real-time support - all while maintaining strict healthcare compliance.",
+    "For our client, Juno reduced document review time from hours to seconds, giving medical teams instant access to critical information.",
+    "That's Juno - just one example of how Pelian builds AI agents that deliver real business impact. Ready to transform your operations with AI?"
+  ]
+}
