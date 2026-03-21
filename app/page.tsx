@@ -93,7 +93,7 @@ export default function Home() {
         onMouseLeave={() => setIsCardHovered(false)}
       >
         {/* Dithering shader background */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-multiply">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
           <Suspense fallback={<div className="absolute inset-0 bg-white/5" />}>
             <Dithering
               colorBack="#00000000"
