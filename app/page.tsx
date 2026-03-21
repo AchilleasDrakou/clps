@@ -23,11 +23,7 @@ const Dithering = lazy(() =>
 
 type FlowState = "url-input" | "brief-builder";
 
-const MODES: DemoBrief["mode"][] = [
-  "raw",
-  "showreel",
-  "showreel",
-];
+const MODES: DemoBrief["mode"][] = ["raw", "tutorial", "showreel"];
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
