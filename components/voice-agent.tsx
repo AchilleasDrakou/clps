@@ -1,19 +1,21 @@
 "use client";
 
 import { useConversation } from "@elevenlabs/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DemoBrief } from "@/lib/pipeline/types";
 
 interface VoiceAgentProps {
   agentId: string;
   onDemoRequested: (brief: DemoBrief) => void;
   onStatusChange?: (status: string) => void;
+  pipelineStatus?: string;
 }
 
-export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAgentProps) {
+export function VoiceAgent({ agentId, onDemoRequested, onStatusChange, pipelineStatus }: VoiceAgentProps) {
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState<"speaking" | "listening" | "idle">("idle");
   const [transcript, setTranscript] = useState<string[]>([]);
+  const keepaliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -35,6 +37,10 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
     onModeChange: (data) => {
       setMode(data.mode === "speaking" ? "speaking" : data.mode === "listening" ? "listening" : "idle");
     },
+    onError: (error) => {
+      console.error("[VoiceAgent] Error:", error);
+      onStatusChange?.("Error");
+    },
     clientTools: {
       start_demo_generation: async (params: any) => {
         const brief: DemoBrief = {
@@ -49,11 +55,30 @@ export function VoiceAgent({ agentId, onDemoRequested, onStatusChange }: VoiceAg
     },
   });
 
+  // Send pipeline progress as contextual updates so Clippee can narrate
+  useEffect(() => {
+    if (isActive && pipelineStatus) {
+      conversation.sendContextualUpdate(pipelineStatus);
+    }
+  }, [pipelineStatus, isActive, conversation]);
+
+  // Keepalive: prevent conversation timeout during long pipeline runs
+  useEffect(() => {
+    if (isActive) {
+      keepaliveRef.current = setInterval(() => {
+        conversation.sendUserActivity();
+      }, 30_000);
+    }
+    return () => {
+      if (keepaliveRef.current) clearInterval(keepaliveRef.current);
+    };
+  }, [isActive, conversation]);
+
   const handleToggle = useCallback(async () => {
     if (isActive) {
       await conversation.endSession();
     } else {
-      await conversation.startSession({ agentId, connectionType: "websocket" });
+      await conversation.startSession({ agentId, connectionType: "webrtc" });
     }
   }, [isActive, agentId, conversation]);
 

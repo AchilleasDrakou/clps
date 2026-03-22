@@ -80,7 +80,7 @@ export async function captureDemo(
   signal?: AbortSignal
 ): Promise<CaptureResult> {
   // 1. Launch Firecrawl Browser Sandbox
-  const session = await fcFetch("/browser", { ttl: 180, activityTtl: 120 });
+  const session = await fcFetch("/browser", { ttl_total: 180, ttl_without_activity: 120 });
   if (!session.id || !session.cdpUrl) {
     throw new Error("Firecrawl browser session missing id or cdpUrl");
   }

@@ -18,7 +18,8 @@ export async function generateMusicBed(
 
   const response = await client.textToSoundEffects.convert({
     text: description,
-    duration_seconds: Math.min(Math.max(durationSec, 5), 22), // API limit: 0.5-22s
+    duration_seconds: Math.min(Math.max(durationSec, 0.5), 30), // API limit: 0.5-30s
+    prompt_influence: 0.5,
   });
 
   // Response is an async iterator of audio chunks
